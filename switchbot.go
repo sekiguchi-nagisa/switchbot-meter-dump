@@ -4,21 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 	"log"
+	"time"
 
 	"github.com/go-ble/ble"
 	"github.com/go-ble/ble/examples/lib/dev"
 )
 
-// SwitchBot Meter のサービスとキャラクタリスティックUUID
-var SwitchBotServiceUUID = ble.MustParse("cba20d00-224d-11e6-9fb8-0002a5d5c51b")
-var SwitchBotCharacteristicUUID = ble.MustParse("cba20002-224d-11e6-9fb8-0002a5d5c51b")
-
 type MeterData struct {
 	Temperature float64
-	Humidity    int
-	Battery     int
+	Humidity    uint
+	Battery     uint
 	Timestamp   time.Time
 }
 
@@ -66,8 +62,25 @@ func (s *SwitchBotScanner) ScanForSwitchBotDevices(addr ble.Addr, timeout time.D
 	return devices, nil
 }
 
-func ParseManufacturerData(data []byte) (MeterData, error) {
+func DecodeManufacturerData(data []byte) (MeterData, error) {
+	if len(data) != 15 {
+		return MeterData{}, errors.New("invalid manufacturer data length")
+	}
+
 	// [105 9 176 233 254 87 31 201 44 100 8 153 61 0 4]
-	fmt.Printf("manufacturer data: %v\n", data)
-	return MeterData{}, nil
+	//   battery: 100
+	//   humidity: 61
+	//   temperature: (153 & 0x7f) + (8 & 0xf)/10.0 = 25.8
+	battery := uint(data[9] & 0x7f)
+	humidity := uint(data[12] & 0x7f)
+	temperature := float64(data[10]&0xf)/10.0 + float64(data[11]&0x7f)
+	if data[11] < 128 {
+		temperature = -temperature
+	}
+	return MeterData{
+		Temperature: temperature,
+		Humidity:    humidity,
+		Battery:     battery,
+		Timestamp:   time.Now(),
+	}, nil
 }

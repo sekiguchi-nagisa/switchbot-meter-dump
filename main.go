@@ -15,6 +15,7 @@ var CLI struct {
 	Version kong.VersionFlag `short:"v" help:"Show version information"`
 	Addr    string           `short:"a" required:"" help:"Set target SwitchBot Meter address"`
 	Output  string           `short:"o" required:"" help:"Set output file"`
+	Timeout time.Duration    `short:"t" default:"5s" help:"Set scan timeout"`
 	Debug   bool             `optional:"" default:"false" help:"Set debug mode"`
 }
 
@@ -56,7 +57,7 @@ func main() {
 	if CLI.Debug {
 		fmt.Println("scan for SwitchBot devices")
 	}
-	devices, err := scanner.ScanForSwitchBotDevices(ble.NewAddr(CLI.Addr), 5*time.Second)
+	devices, err := scanner.ScanForSwitchBotDevices(ble.NewAddr(CLI.Addr), CLI.Timeout)
 	if err != nil {
 		log.Fatal("device scan error:", err)
 	}
@@ -75,9 +76,9 @@ func main() {
 		fmt.Printf("manufacturer data: %v\n", device.ManufacturerData())
 	}
 
-	meterData, err := ParseManufacturerData(device.ManufacturerData())
+	meterData, err := DecodeManufacturerData(device.ManufacturerData())
 	if err != nil {
-		log.Fatal("parse manufacturer data error:", err)
+		log.Fatal(err)
 	}
 	log.Println(meterData)
 }
