@@ -63,12 +63,23 @@ func main() {
 
 	// scan for SwitchBot devices
 	slog.Debug("scan for SwitchBot devices")
-	devices, err := scanner.ScanForSwitchBotDevices(ble.NewAddr(CLI.Addr), CLI.Timeout)
+	var devices []ble.Advertisement
+	for i := 0; i < 5; i++ {
+		devices, err = scanner.ScanForSwitchBotDevices(ble.NewAddr(CLI.Addr), CLI.Timeout)
+		if err != nil {
+			break
+		}
+		if len(devices) > 0 {
+			break
+		}
+		retry := 1 << i
+		slog.Warn(fmt.Sprintf("SwitchBot device not found, retrying in %d second", retry))
+		time.Sleep(time.Duration(retry) * time.Second)
+	}
 	if err != nil {
 		slog.Error(fmt.Sprintf("device scan error: %v", err))
 		os.Exit(1)
 	}
-
 	if len(devices) == 0 {
 		slog.Error("SwitchBot device not found")
 		os.Exit(1)
