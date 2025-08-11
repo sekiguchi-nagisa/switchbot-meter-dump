@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/go-ble/ble"
@@ -48,7 +48,7 @@ func (s *SwitchBotScanner) ScanForSwitchBotDevices(addr ble.Addr, timeout time.D
 
 	advHandler := func(a ble.Advertisement) {
 		devices = append(devices, a)
-		log.Printf("found device: %s (RSSI: %d)\n", a.Addr(), a.RSSI())
+		slog.Info(fmt.Sprintf("found device: %s (RSSI: %d)\n", a.Addr(), a.RSSI()))
 	}
 	advFilter := func(a ble.Advertisement) bool {
 		return a.Addr().String() == addr.String()

@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"runtime/debug"
 	"time"
@@ -48,37 +48,43 @@ func main() {
 		os.Exit(0)
 	}
 
+	if CLI.Debug {
+		slog.SetLogLoggerLevel(slog.LevelDebug)
+	}
+
 	scanner, err := NewSwitchBotScanner()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
+		os.Exit(1)
 	}
 
 	// scan for SwitchBot devices
-	if CLI.Debug {
-		fmt.Println("scan for SwitchBot devices")
-	}
+	slog.Debug("scan for SwitchBot devices")
 	devices, err := scanner.ScanForSwitchBotDevices(ble.NewAddr(CLI.Addr), CLI.Timeout)
 	if err != nil {
-		log.Fatal("device scan error:", err)
+		slog.Error(fmt.Sprintf("device scan error: %v", err))
+		os.Exit(1)
 	}
 
 	if len(devices) == 0 {
-		log.Fatal("SwitchBot device not found")
+		slog.Error("SwitchBot device not found")
+		os.Exit(1)
 	}
 
 	// parse manufacturer data
 	device := devices[0]
-	if CLI.Debug {
-		fmt.Printf("device: %s\n", device.Addr())
+	if slog.Default().Enabled(nil, slog.LevelDebug) {
+		slog.Debug("device: " + device.Addr().String())
 		for _, data := range device.ServiceData() {
-			fmt.Printf("service data: %s, %v\n", data.UUID, data.Data)
+			slog.Debug(fmt.Sprintf("service data: %s, %v\n", data.UUID, data.Data))
 		}
-		fmt.Printf("manufacturer data: %v\n", device.ManufacturerData())
+		slog.Debug(fmt.Sprintf("manufacturer data: %v\n", device.ManufacturerData()))
 	}
 
 	meterData, err := DecodeManufacturerData(device.ManufacturerData())
 	if err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
+		os.Exit(1)
 	}
-	log.Println(meterData)
+	slog.Info(meterData.String())
 }
