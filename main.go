@@ -1,11 +1,14 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"os"
 	"runtime/debug"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/alecthomas/kong"
 	"github.com/go-ble/ble"
@@ -76,9 +79,9 @@ func main() {
 	if slog.Default().Enabled(nil, slog.LevelDebug) {
 		slog.Debug("device: " + device.Addr().String())
 		for _, data := range device.ServiceData() {
-			slog.Debug(fmt.Sprintf("service data: %s, %v\n", data.UUID, data.Data))
+			slog.Debug(fmt.Sprintf("service data: %s, %v", data.UUID, data.Data))
 		}
-		slog.Debug(fmt.Sprintf("manufacturer data: %v\n", device.ManufacturerData()))
+		slog.Debug(fmt.Sprintf("manufacturer data: %v", device.ManufacturerData()))
 	}
 
 	meterData, err := DecodeManufacturerData(device.ManufacturerData())
@@ -87,4 +90,19 @@ func main() {
 		os.Exit(1)
 	}
 	slog.Info(meterData.String())
+
+	// save to DB
+	db, err := sql.Open("sqlite3", CLI.Output)
+	if err != nil {
+		slog.Error(fmt.Sprintf("Error Open: %s", err.Error()))
+		os.Exit(1)
+	}
+	defer func(conn *sql.DB) {
+		_ = conn.Close()
+	}(db)
+	err = InsertMeter(db, meterData)
+	if err != nil {
+		slog.Error(fmt.Sprintf("InsertMeter failed: %s", err.Error()))
+		os.Exit(1)
+	}
 }
