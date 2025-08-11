@@ -22,7 +22,7 @@ func InsertMeter(db *sql.DB, meter MeterData) error {
 	       (timestamp, temperature, humidity, battery) values (?, ?, ?, ?);
 	`
 	_, err = db.Exec(insertSQL,
-		meter.Timestamp.Format("2006-01-02 15:04:05"),
+		meter.Timestamp.Format("2006-01-02T15:04:05+09:00"),
 		meter.Temperature, meter.Humidity, meter.Battery)
 	if err != nil {
 		return err
